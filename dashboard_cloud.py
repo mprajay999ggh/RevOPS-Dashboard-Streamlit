@@ -184,7 +184,7 @@ if df is not None:
         st.metric("Data as of", formatted_datetime)
     
     # Show table
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width='stretch')
     
     st.markdown("---")
     st.caption("Made with Streamlit · RevOps Dashboard · 2025")
