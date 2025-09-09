@@ -137,7 +137,7 @@ def get_data_from_database():
         try:
             revops_df = pd.read_csv('revops.csv')
             merged_df = df.merge(revops_df, left_on='USER_ID', right_on='User_Id', how='left')
-            result = merged_df[['USER_ID', 'FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'last_activity_date_est']].copy()
+            result = merged_df[['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'last_activity_date_est']].copy()
             result.columns = [col.upper() for col in result.columns]
             return result, datetime.now()
         except FileNotFoundError:
