@@ -12,8 +12,8 @@ import os
 load_dotenv()
 server = os.getenv('SERVER')
 database = os.getenv('DATABASE')
-username = os.getenv('USERNAME')
-password = os.getenv('PASSWORD')
+username = os.getenv('DB_USERNAME')
+password = os.getenv('DB_PASSWORD')
 
 conn_str = (
     f"mssql+pyodbc://{username}:{password}@{server}/{database}"
@@ -36,7 +36,7 @@ user_ids = [
 
 # Today at 4 AM UTC
 start_time = datetime.now(timezone.utc).replace(hour=4, minute=0, second=0, microsecond=0)
-print(f"⏱️ Start time (UTC): {start_time}")
+print(f"Start time (UTC): {start_time}")
 # ------------------------
 # Build SQL query with aggregation
 # ------------------------
@@ -73,7 +73,7 @@ df['last_activity_date_est'] = df['last_activity_date'].dt.tz_localize('UTC').dt
 # Optionally, remove timezone info if you want naive datetime
 df['last_activity_date_est'] = df['last_activity_date_est'].dt.tz_localize(None)
 
-print(f"✅ Retrieved {len(df)} users")
+print(f"Retrieved {len(df)} users")
 
 # ------------------------
 # Join with revops.csv to get name and email
@@ -87,14 +87,25 @@ result.columns = [col.upper() for col in result.columns]
 print(result)
 result.to_csv('result.csv', index=False)
 
-print("✅ Saved results to result.csv for dashboard.")
+print("Saved results to result.csv for dashboard.")
 
 # Automate git commit and push for result.csv
 import subprocess
 try:
+    # Add the result.csv file
     subprocess.run(['git', 'add', 'result.csv'], check=True)
-    subprocess.run(['git', 'commit', '-m', 'Update dashboard data'], check=True)
-    subprocess.run(['git', 'push'], check=True)
-    print("✅ CSV committed and pushed to GitHub.")
+    
+    # Check if there are any changes to commit
+    result_status = subprocess.run(['git', 'diff', '--cached', '--name-only'], 
+                                 capture_output=True, text=True)
+    
+    if 'result.csv' in result_status.stdout:
+        # There are changes to commit
+        subprocess.run(['git', 'commit', '-m', 'Update dashboard data'], check=True)
+        subprocess.run(['git', 'push'], check=True)
+        print("CSV committed and pushed to GitHub.")
+    else:
+        print("No changes in CSV data - GitHub already has the latest version.")
+        
 except Exception as e:
-    print(f"⚠️ Git automation failed: {e}")
+    print(f"Git automation failed: {e}")

@@ -35,25 +35,40 @@ st.write("View the number of assessments completed by each user, along with thei
 # --- Refresh CSV from GitHub ---
 with st.sidebar:
     st.header("Refresh Data from GitHub")
+    
+    # Use session state to manage the refresh flow
+    if 'refresh_clicked' not in st.session_state:
+        st.session_state.refresh_clicked = False
+    
     refresh = st.button("Refresh CSV from GitHub")
+    
     if refresh:
-        password = st.text_input("Enter password to refresh", type="password")
-        if password:
+        st.session_state.refresh_clicked = True
+    
+    if st.session_state.refresh_clicked:
+        password = st.text_input("Enter password to refresh", type="password", key="refresh_password")
+        
+        if st.button("Submit Password", key="submit_password"):
             if password == os.getenv('REFRESH_PASSWORD'):
-                with st.spinner("Updating data from database and GitHub..."):
+                with st.spinner("Updating data from database..."):
                     try:
                         # Run main.py to update result.csv from DB
-                        subprocess.run(["python", "main.py"], check=True)
-                        # Optionally, pull latest from GitHub (if needed)
-                        subprocess.run(["git", "pull"], check=True)
-                        st.success("CSV refreshed from DB and GitHub!")
+                        result = subprocess.run(["python", "main.py"], check=True, capture_output=True, text=True)
+                        st.success("✅ CSV refreshed from database!")
                         st.balloons()
+                        # Reset the refresh state
+                        st.session_state.refresh_clicked = False
                         # Force rerun to show updated data
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"Failed to refresh: {e}")
+                    except subprocess.CalledProcessError as e:
+                        st.error(f"❌ Failed to refresh: {e}")
+                        st.error(f"Error output: {e.stderr}")
             else:
-                st.error("Incorrect password. CSV not refreshed.")
+                st.error("❌ Incorrect password. CSV not refreshed.")
+        
+        if st.button("Cancel", key="cancel_refresh"):
+            st.session_state.refresh_clicked = False
+            st.rerun()
 
 
 # Load data (only from CSV, not from DB)
