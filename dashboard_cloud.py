@@ -59,14 +59,39 @@ def get_data_from_database():
         if not all([server, database, username, password]):
             raise Exception("Missing database credentials. Check .env file or Streamlit secrets.")
         
-        # Create connection
-        conn_str = (
-            f"mssql+pyodbc://{username}:{password}@{server}/{database}"
-            "?driver=ODBC+Driver+18+for+SQL+Server"
-            "&Encrypt=yes"
-            "&TrustServerCertificate=no"
-        )
-        engine = create_engine(conn_str)
+        # Try different connection methods for cloud compatibility
+        connection_methods = [
+            # Method 1: pymssql (more cloud-friendly)
+            lambda: f"mssql+pymssql://{username}:{password}@{server}/{database}",
+            # Method 2: pyodbc with different drivers
+            lambda: f"mssql+pyodbc://{username}:{password}@{server}/{database}?driver=ODBC+Driver+17+for+SQL+Server&Encrypt=yes&TrustServerCertificate=yes",
+            lambda: f"mssql+pyodbc://{username}:{password}@{server}/{database}?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes&TrustServerCertificate=yes",
+            lambda: f"mssql+pyodbc://{username}:{password}@{server}/{database}?driver=FreeTDS&Encrypt=yes&TrustServerCertificate=yes"
+        ]
+        
+        engine = None
+        last_error = None
+        
+        for method in connection_methods:
+            try:
+                conn_str = method()
+                test_engine = create_engine(conn_str)
+                # Test the connection
+                with test_engine.connect() as test_conn:
+                    test_conn.execute(text("SELECT 1"))
+                engine = test_engine
+                break
+            except Exception as e:
+                last_error = str(e)
+                continue
+        
+        if not engine:
+            # Show debug info in development
+            debug_info = f"Could not establish database connection. Last error: {last_error}"
+            if not hasattr(st, 'secrets'):  # Only show in local development
+                debug_info += f"\nTried connecting to: {server}/{database} with user: {username}"
+            raise Exception(debug_info)
+# Engine is already created above in the connection method testing
         
         # Query parameters
         outcome_id = 1027
