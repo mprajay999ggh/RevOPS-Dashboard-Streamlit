@@ -208,8 +208,10 @@ if df is not None:
         formatted_datetime = pd.to_datetime(max_date).strftime('%Y-%m-%d %H:%M')
         st.metric("Data as of", formatted_datetime)
     
-    # Show table
-    st.dataframe(df, width='stretch')
+    # Show table with index starting from 1
+    df_display = df.copy()
+    df_display.index = range(1, len(df_display) + 1)
+    st.dataframe(df_display, width='stretch')
     
     st.markdown("---")
     st.caption("Made with Streamlit · RevOps Dashboard · 2025")
