@@ -42,11 +42,19 @@ st.markdown("""
 def get_data_from_database():
     """Fetch data directly from database with caching"""
     try:
-        # Get credentials from environment variables or Streamlit secrets
-        server = os.getenv('SERVER') or (st.secrets.database.SERVER if hasattr(st, 'secrets') and 'database' in st.secrets else None)
-        database = os.getenv('DATABASE') or (st.secrets.database.DATABASE if hasattr(st, 'secrets') and 'database' in st.secrets else None)
-        username = os.getenv('DB_USERNAME') or (st.secrets.database.DB_USERNAME if hasattr(st, 'secrets') and 'database' in st.secrets else None)
-        password = os.getenv('DB_PASSWORD') or (st.secrets.database.DB_PASSWORD if hasattr(st, 'secrets') and 'database' in st.secrets else None)
+        # Get credentials from Streamlit secrets or environment variables
+        if hasattr(st, 'secrets') and 'database' in st.secrets:
+            # Streamlit Cloud secrets (TOML format)
+            server = st.secrets.database.SERVER
+            database = st.secrets.database.DATABASE
+            username = st.secrets.database.DB_USERNAME
+            password = st.secrets.database.DB_PASSWORD
+        else:
+            # Environment variables (for local development)
+            server = os.getenv('SERVER')
+            database = os.getenv('DATABASE')
+            username = os.getenv('DB_USERNAME')
+            password = os.getenv('DB_PASSWORD')
         
         if not all([server, database, username, password]):
             raise Exception("Missing database credentials. Check .env file or Streamlit secrets.")
@@ -140,7 +148,12 @@ with st.sidebar:
         password = st.text_input("Enter password to refresh", type="password", key="refresh_password")
         
         if st.button("Submit Password", key="submit_password"):
-            if password == os.getenv('REFRESH_PASSWORD'):
+            # Get refresh password from secrets or environment
+            refresh_password = (st.secrets.auth.REFRESH_PASSWORD 
+                              if hasattr(st, 'secrets') and 'auth' in st.secrets 
+                              else os.getenv('REFRESH_PASSWORD'))
+            
+            if password == refresh_password:
                 st.cache_data.clear()
                 st.success("✅ Data refreshed!")
                 st.balloons()
