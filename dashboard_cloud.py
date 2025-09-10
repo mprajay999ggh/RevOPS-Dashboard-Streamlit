@@ -17,6 +17,17 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Simple CSS to center the title and move it up
+st.markdown("""
+    <style>
+    h1 {
+        text-align: center;
+        margin-top: -2.5rem;
+        padding-top: 0;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # Database connection function with automatic refresh
 @st.cache_data(ttl=600)  # Cache for 10 minutes (600 seconds) - fresh data every 10 minutes
 def get_data_from_database():
@@ -150,11 +161,8 @@ def get_data_from_database():
         st.error(f"Database connection failed: {e}")
         return None, None, None, None
 
-# Title and description with logo
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    #st.image("https://media.licdn.com/dms/image/v2/D560BAQFSTXhdraFD5Q/company-logo_200_200/company-logo_200_200/0/1724431599059/groundgame_health_logo?e=2147483647&v=beta&t=m6wbKFRl8Ecxb7ECLTMRp0QLOMTJ-sOjUBBOGWtlNco", width=150)
-    st.title("OpsRev Assessments Dashboard")
+# Title
+st.title("OpsRev Assessments Dashboard")
 
 # Sidebar with date filter and refresh controls
 with st.sidebar:
