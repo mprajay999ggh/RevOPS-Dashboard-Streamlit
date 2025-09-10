@@ -224,7 +224,7 @@ if df is not None:
             max_date_utc = pd.to_datetime(max_activity_date_2025).tz_localize('UTC')
             max_date_est = max_date_utc.tz_convert(eastern)
             formatted_datetime = max_date_est.strftime('%Y-%m-%d %H:%M')
-        st.metric("Data as of", formatted_datetime)
+        st.metric("Data as of (EST)", formatted_datetime)
     
     # Show table with index starting from 1
     df_display = df.copy()
