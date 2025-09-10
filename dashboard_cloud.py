@@ -208,9 +208,7 @@ with st.sidebar:
     
     st.markdown("---")
     st.header("Data Controls")
-    
-    # Clearer explanation
-    st.caption("💡 Data automatically refreshes every 10 minutes when you visit the page")
+
     
     # Use session state to manage the refresh flow
     if 'refresh_clicked' not in st.session_state:
