@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, text
 import pytz
 from datetime import datetime, timezone, timedelta
 import os
+import time
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -37,8 +38,33 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Database connection function
-@st.cache_data(ttl=1800)  # Cache for 30 minutes (1800 seconds)
+def should_auto_refresh():
+    """Check if it's time for automatic refresh (at 25 minutes past each hour)"""
+    now = datetime.now()
+    
+    # Initialize session state for tracking refreshes
+    if 'last_auto_refresh_hour' not in st.session_state:
+        st.session_state.last_auto_refresh_hour = -1
+    
+    # Check if it's 25 minutes past any hour and we haven't refreshed this hour yet
+    if now.minute >= 25 and st.session_state.last_auto_refresh_hour != now.hour:
+        st.session_state.last_auto_refresh_hour = now.hour
+        return True
+    
+    return False
+
+def auto_refresh_data():
+    """Automatically refresh data if it's the right time (cloud-compatible)"""
+    if should_auto_refresh():
+        # Clear cache to force refresh
+        st.cache_data.clear()
+        # Show notification without forcing rerun
+        st.success("🔄 Data auto-refreshed! (Hourly at :25)")
+        return True
+    return False
+
+# Database connection function with automatic refresh
+@st.cache_data(ttl=2100)  # Cache for 35 minutes (2100 seconds) - expires just before :25 refresh
 def get_data_from_database():
     """Fetch data directly from database with caching"""
     try:
@@ -208,6 +234,20 @@ with st.sidebar:
     st.markdown("---")
     st.header("Data Controls")
     
+    # Show next auto-refresh time
+    now = datetime.now()
+    if now.minute < 25:
+        next_refresh = now.replace(minute=25, second=0, microsecond=0)
+        time_until = next_refresh - now
+        minutes_until = int(time_until.total_seconds() / 60)
+        st.info(f"🕐 Next auto-refresh: {next_refresh.strftime('%I:%M %p')} ({minutes_until} min)")
+    else:
+        next_refresh = (now + timedelta(hours=1)).replace(minute=25, second=0, microsecond=0)
+        st.info(f"🕐 Next auto-refresh: {next_refresh.strftime('%I:%M %p')}")
+    
+    # Auto-refresh happens when cache expires + manual page interaction
+    st.caption("💡 Data refreshes automatically every hour at :25 minutes when you interact with the page")
+    
     # Use session state to manage the refresh flow
     if 'refresh_clicked' not in st.session_state:
         st.session_state.refresh_clicked = False
@@ -242,6 +282,12 @@ with st.sidebar:
 
 # Get data
 df, last_fetched, max_activity_date_2025, raw_df = get_data_from_database()
+
+# Check for automatic refresh (cloud-compatible)
+refreshed = auto_refresh_data()
+if refreshed:
+    # Re-fetch data after cache clear
+    df, last_fetched, max_activity_date_2025, raw_df = get_data_from_database()
 
 if df is not None and raw_df is not None:
     
