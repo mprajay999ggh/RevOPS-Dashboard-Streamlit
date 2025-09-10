@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 st.set_page_config(
-    page_title="RevOps Assessments Dashboard", 
+    page_title="OpsRev Assessments Dashboard", 
     page_icon="https://media.licdn.com/dms/image/v2/D560BAQFSTXhdraFD5Q/company-logo_200_200/company-logo_200_200/0/1724431599059/groundgame_health_logo?e=2147483647&v=beta&t=m6wbKFRl8Ecxb7ECLTMRp0QLOMTJ-sOjUBBOGWtlNco", 
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -154,15 +154,15 @@ def get_data_from_database():
         # Rename columns for clarity
         grouped_df.columns = ['USER_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']
         
-        # Join with revops.csv for names
+        # Join with opsrev.csv for names
         try:
-            revops_df = pd.read_csv('revops.csv')
-            merged_df = grouped_df.merge(revops_df, left_on='USER_ID', right_on='User_Id', how='left')
+            opsrev_df = pd.read_csv('opsrev.csv')
+            merged_df = grouped_df.merge(opsrev_df, left_on='USER_ID', right_on='User_Id', how='left')
             result = merged_df[['USER_ID', 'FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']].copy()
             result.columns = [col.upper() for col in result.columns]
             return result, datetime.now(), max_activity_date_2025, df  # Return raw data too
         except FileNotFoundError:
-            # If revops.csv not found, return data without names
+            # If opsrev.csv not found, return data without names
             grouped_df.columns = [col.upper() for col in grouped_df.columns]
             return grouped_df, datetime.now(), max_activity_date_2025, df  # Return raw data too
             
@@ -174,7 +174,7 @@ def get_data_from_database():
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     #st.image("https://media.licdn.com/dms/image/v2/D560BAQFSTXhdraFD5Q/company-logo_200_200/company-logo_200_200/0/1724431599059/groundgame_health_logo?e=2147483647&v=beta&t=m6wbKFRl8Ecxb7ECLTMRp0QLOMTJ-sOjUBBOGWtlNco", width=150)
-    st.title("RevOps Assessments Dashboard")
+    st.title("OpsRev Assessments Dashboard")
 
 # Sidebar with date filter and refresh controls
 with st.sidebar:
@@ -299,6 +299,6 @@ if df is not None and raw_df is not None:
     st.dataframe(df_display, width='stretch')
     
     st.markdown("---")
-    st.caption("Made with Streamlit · RevOps Dashboard · 2025")
+    st.caption("Made with Streamlit · OpsRev Dashboard · 2025")
 else:
     st.error("Unable to load data. Please check database connection.")
