@@ -128,10 +128,16 @@ def get_data_from_database():
         with engine.connect() as conn:
             df = pd.read_sql(text(sql_query), conn, params=params)
         
-        # Convert UTC to Eastern Time
-        eastern = pytz.timezone('US/Eastern')
-        df['last_activity_date_est'] = df['last_activity_date'].dt.tz_localize('UTC').dt.tz_convert(eastern)
-        df['last_activity_date_est'] = df['last_activity_date_est'].dt.tz_localize(None)
+        # Convert last_activity_date to datetime and then to Eastern Time
+        try:
+            df['last_activity_date'] = pd.to_datetime(df['last_activity_date'])
+            eastern = pytz.timezone('US/Eastern')
+            df['last_activity_date_est'] = df['last_activity_date'].dt.tz_localize('UTC').dt.tz_convert(eastern)
+            df['last_activity_date_est'] = df['last_activity_date_est'].dt.tz_localize(None)
+        except Exception as dt_error:
+            st.warning(f"Date conversion warning: {dt_error}")
+            # Fallback: use the original date column
+            df['last_activity_date_est'] = df['last_activity_date']
         
         # Join with revops.csv for names
         try:
