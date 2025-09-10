@@ -17,27 +17,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-st.markdown("""
-    <style>
-    .main {
-        background-color: #f5f7fa;
-    }
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        border-radius: 12px;
-        background: #fff;
-        box-shadow: 0 2px 16px rgba(0,0,0,0.07);
-    }
-    .stDataFrame th, .stDataFrame td {
-        font-size: 1.1em;
-    }
-    h1 {
-        text-align: center;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 # Database connection function with automatic refresh
 @st.cache_data(ttl=600)  # Cache for 10 minutes (600 seconds) - fresh data every 10 minutes
 def get_data_from_database():
@@ -153,13 +132,13 @@ def get_data_from_database():
         }).reset_index()
         
         # Rename columns for clarity
-        grouped_df.columns = ['USER_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']
+        grouped_df.columns = ['USER_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ASSESSMENT_TIME']
         
         # Join with opsrev.csv for names
         try:
             opsrev_df = pd.read_csv('opsrev.csv')
             merged_df = grouped_df.merge(opsrev_df, left_on='USER_ID', right_on='User_Id', how='left')
-            result = merged_df[['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']].copy()
+            result = merged_df[['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ASSESSMENT_TIME']].copy()
             result.columns = [col.upper() for col in result.columns]
             return result, datetime.now(), max_activity_date_2025, df  # Return raw data too
         except FileNotFoundError:
@@ -266,21 +245,21 @@ if df is not None and raw_df is not None:
         }).reset_index()
         
         # Rename columns for clarity
-        filtered_grouped.columns = ['USER_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']
+        filtered_grouped.columns = ['USER_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ASSESSMENT_TIME']
         
         # Join with opsrev.csv for names (same as in main function)
         try:
             opsrev_df = pd.read_csv('opsrev.csv')
             merged_filtered = filtered_grouped.merge(opsrev_df, left_on='USER_ID', right_on='User_Id', how='left')
-            filtered_df = merged_filtered[['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']].copy()
+            filtered_df = merged_filtered[['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ASSESSMENT_TIME']].copy()
             filtered_df.columns = [col.upper() for col in filtered_df.columns]
         except FileNotFoundError:
             # If opsrev.csv not found, return data without names
-            filtered_df = filtered_grouped[['ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']].copy()
+            filtered_df = filtered_grouped[['ASSESSMENTS_COMPLETED', 'LAST_ASSESSMENT_TIME']].copy()
             filtered_df.columns = [col.upper() for col in filtered_df.columns]
     else:
         # No data after filtering
-        filtered_df = pd.DataFrame(columns=['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST'])
+        filtered_df = pd.DataFrame(columns=['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ASSESSMENT_TIME'])
 
     # Show metrics
     col1, col2, col3 = st.columns(3)
