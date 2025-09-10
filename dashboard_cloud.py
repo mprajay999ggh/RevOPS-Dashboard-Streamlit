@@ -29,7 +29,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Database connection function with automatic refresh
-@st.cache_data(ttl=600)  # Cache for 10 minutes (600 seconds) - fresh data every 10 minutes
+@st.cache_data(ttl=300)  # Cache for 10 minutes (600 seconds) - fresh data every 10 minutes
 def get_data_from_database():
     """Fetch data directly from database with caching"""
     try:
