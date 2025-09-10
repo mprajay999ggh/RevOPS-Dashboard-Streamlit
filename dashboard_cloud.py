@@ -158,7 +158,7 @@ def get_data_from_database():
         try:
             opsrev_df = pd.read_csv('opsrev.csv')
             merged_df = grouped_df.merge(opsrev_df, left_on='USER_ID', right_on='User_Id', how='left')
-            result = merged_df[['USER_ID', 'FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']].copy()
+            result = merged_df[['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']].copy()
             result.columns = [col.upper() for col in result.columns]
             return result, datetime.now(), max_activity_date_2025, df  # Return raw data too
         except FileNotFoundError:
