@@ -58,8 +58,6 @@ def auto_refresh_data():
     if should_auto_refresh():
         # Clear cache to force refresh
         st.cache_data.clear()
-        # Show notification without forcing rerun
-        st.success("🔄 Data auto-refreshed! (Hourly at :25)")
         return True
     return False
 
@@ -240,13 +238,13 @@ with st.sidebar:
         next_refresh = now.replace(minute=25, second=0, microsecond=0)
         time_until = next_refresh - now
         minutes_until = int(time_until.total_seconds() / 60)
-        st.info(f"🕐 Next auto-refresh: {next_refresh.strftime('%I:%M %p')} ({minutes_until} min)")
+        st.info(f"🕐 Auto-refresh window: {next_refresh.strftime('%I:%M %p')} ({minutes_until} min)")
     else:
         next_refresh = (now + timedelta(hours=1)).replace(minute=25, second=0, microsecond=0)
-        st.info(f"🕐 Next auto-refresh: {next_refresh.strftime('%I:%M %p')}")
+        st.info(f"🕐 Next auto-refresh window: {next_refresh.strftime('%I:%M %p')}")
     
-    # Auto-refresh happens when cache expires + manual page interaction
-    st.caption("💡 Data refreshes automatically every hour at :25 minutes when you interact with the page")
+    # Clearer explanation
+    st.caption("💡 Data automatically refreshes every hour starting at :25 minutes past the hour")
     
     # Use session state to manage the refresh flow
     if 'refresh_clicked' not in st.session_state:
