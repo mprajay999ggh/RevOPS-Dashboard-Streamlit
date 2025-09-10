@@ -222,7 +222,8 @@ with st.sidebar:
             st.rerun()
 
 # Get data
-df, last_fetched, max_activity_date_2025, raw_df = get_data_from_database()
+with st.spinner('Fetching fresh data from database...'):
+    df, last_fetched, max_activity_date_2025, raw_df = get_data_from_database()
 
 if df is not None and raw_df is not None:
     
