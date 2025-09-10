@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
 import pytz
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import os
 from dotenv import load_dotenv
 
@@ -103,7 +103,7 @@ def get_data_from_database():
         ]
         
         # Today at 4 AM UTC
-        start_time = datetime.now(timezone.utc).replace(hour=4, minute=0, second=0, microsecond=0)
+        start_time = datetime.now().replace(hour=4, minute=0, second=0, microsecond=0)
         
         # Build SQL query
         placeholders = ', '.join([f":id{i}" for i in range(len(user_ids))])
