@@ -43,9 +43,13 @@ def should_auto_refresh():
     eastern = pytz.timezone('US/Eastern')
     now_est = datetime.now(eastern)
     
-    # Initialize session state for tracking refreshes
+    # Initialize session state for tracking refreshes with current hour if not set
     if 'last_auto_refresh_hour' not in st.session_state:
-        st.session_state.last_auto_refresh_hour = -1
+        # Initialize with current hour if we're past :25, otherwise -1
+        if now_est.minute >= 25:
+            st.session_state.last_auto_refresh_hour = now_est.hour
+        else:
+            st.session_state.last_auto_refresh_hour = -1
     
     # Check if it's 25 minutes past any hour and we haven't refreshed this hour yet
     if now_est.minute >= 25 and st.session_state.last_auto_refresh_hour != now_est.hour:
