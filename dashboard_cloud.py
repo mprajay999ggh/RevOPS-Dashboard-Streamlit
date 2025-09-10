@@ -162,7 +162,7 @@ def get_data_from_database():
         return None, None, None, None
 
 # Title
-st.title("OpsRev Assessments Dashboard")
+st.title("TIGER Team Assessments Dashboard")
 
 # Sidebar with date filter and refresh controls
 with st.sidebar:
