@@ -266,10 +266,16 @@ if df is not None and raw_df is not None:
         # Rename columns for clarity
         filtered_grouped.columns = ['USER_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']
         
-        # Join with names from original df (using uppercase column names)
-        filtered_df = df[['FULL_NAME', 'LOGIN_ID', 'USER_ID']].merge(
-            filtered_grouped, on='USER_ID', how='inner'
-        )
+        # Join with opsrev.csv for names (same as in main function)
+        try:
+            opsrev_df = pd.read_csv('opsrev.csv')
+            merged_filtered = filtered_grouped.merge(opsrev_df, left_on='USER_ID', right_on='User_Id', how='left')
+            filtered_df = merged_filtered[['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']].copy()
+            filtered_df.columns = [col.upper() for col in filtered_df.columns]
+        except FileNotFoundError:
+            # If opsrev.csv not found, return data without names
+            filtered_df = filtered_grouped[['ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']].copy()
+            filtered_df.columns = [col.upper() for col in filtered_df.columns]
     else:
         # No data after filtering
         filtered_df = pd.DataFrame(columns=['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST'])
