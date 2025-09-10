@@ -161,7 +161,7 @@ with st.sidebar:
     st.header("Filters")
     
     # Date filter
-    st.subheader("📅 Date Filter")
+    st.subheader("Date Filter")
     
     # Option to filter by single date or date range
     filter_type = st.radio(
@@ -222,8 +222,7 @@ with st.sidebar:
             st.rerun()
 
 # Get data
-with st.spinner('Fetching fresh data from database...'):
-    df, last_fetched, max_activity_date_2025, raw_df = get_data_from_database()
+df, last_fetched, max_activity_date_2025, raw_df = get_data_from_database()
 
 if df is not None and raw_df is not None:
     
@@ -284,7 +283,31 @@ if df is not None and raw_df is not None:
     df_display = filtered_df.copy()
     df_display = df_display.sort_values('ASSESSMENTS_COMPLETED', ascending=False)
     df_display.index = range(1, len(df_display) + 1)
-    st.dataframe(df_display, width='stretch')
+    
+    # Configure column widths
+    st.dataframe(
+        df_display, 
+        use_container_width=True,
+        column_config={
+            "ASSESSMENTS_COMPLETED": st.column_config.NumberColumn(
+                "Assessments",
+                width="small",
+                format="%d"
+            ),
+            "FULL_NAME": st.column_config.TextColumn(
+                "Full Name",
+                width="medium"
+            ),
+            "LOGIN_ID": st.column_config.TextColumn(
+                "Login ID", 
+                width="medium"
+            ),
+            "LAST_ASSESSMENT_TIME": st.column_config.DatetimeColumn(
+                "Last Assessment",
+                width="medium"
+            )
+        }
+    )
     
     st.markdown("---")
     st.caption("Made with Streamlit · OpsRev Dashboard · 2025")
