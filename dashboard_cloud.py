@@ -39,16 +39,17 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def should_auto_refresh():
-    """Check if it's time for automatic refresh (at 25 minutes past each hour)"""
-    now = datetime.now()
+    """Check if it's time for automatic refresh (at 25 minutes past each hour in Eastern Time)"""
+    eastern = pytz.timezone('US/Eastern')
+    now_est = datetime.now(eastern)
     
     # Initialize session state for tracking refreshes
     if 'last_auto_refresh_hour' not in st.session_state:
         st.session_state.last_auto_refresh_hour = -1
     
     # Check if it's 25 minutes past any hour and we haven't refreshed this hour yet
-    if now.minute >= 25 and st.session_state.last_auto_refresh_hour != now.hour:
-        st.session_state.last_auto_refresh_hour = now.hour
+    if now_est.minute >= 25 and st.session_state.last_auto_refresh_hour != now_est.hour:
+        st.session_state.last_auto_refresh_hour = now_est.hour
         return True
     
     return False
@@ -232,16 +233,17 @@ with st.sidebar:
     st.markdown("---")
     st.header("Data Controls")
     
-    # Show next auto-refresh time
-    now = datetime.now()
-    if now.minute < 25:
-        next_refresh = now.replace(minute=25, second=0, microsecond=0)
-        time_until = next_refresh - now
+    # Show next auto-refresh time (in Eastern Time)
+    eastern = pytz.timezone('US/Eastern')
+    now_est = datetime.now(eastern)
+    if now_est.minute < 25:
+        next_refresh = now_est.replace(minute=25, second=0, microsecond=0)
+        time_until = next_refresh - now_est
         minutes_until = int(time_until.total_seconds() / 60)
-        st.info(f"🕐 Auto-refresh window: {next_refresh.strftime('%I:%M %p')} ({minutes_until} min)")
+        st.info(f"🕐 Auto-refresh window: {next_refresh.strftime('%I:%M %p EST')} ({minutes_until} min)")
     else:
-        next_refresh = (now + timedelta(hours=1)).replace(minute=25, second=0, microsecond=0)
-        st.info(f"🕐 Next auto-refresh window: {next_refresh.strftime('%I:%M %p')}")
+        next_refresh = (now_est + timedelta(hours=1)).replace(minute=25, second=0, microsecond=0)
+        st.info(f"🕐 Next auto-refresh window: {next_refresh.strftime('%I:%M %p EST')}")
     
     # Clearer explanation
     st.caption("💡 Data automatically refreshes every hour starting at :25 minutes past the hour")
