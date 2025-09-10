@@ -63,7 +63,7 @@ def auto_refresh_data():
     return False
 
 # Database connection function with automatic refresh
-@st.cache_data(ttl=2100)  # Cache for 35 minutes (2100 seconds) - expires just before :25 refresh
+@st.cache_data(ttl=3600)  # Cache for 1 hour (3600 seconds) - aligns with hourly refresh cycle
 def get_data_from_database():
     """Fetch data directly from database with caching"""
     try:
