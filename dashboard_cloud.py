@@ -102,23 +102,21 @@ def get_data_from_database():
             1494, 12231, 1205, 1214, 12478, 12480, 12481
         ]
         
-        # Today at 4 AM EST, converted to UTC for database query
+        # September 1st, 2025 at 4 AM EST, converted to UTC for database query
         eastern = pytz.timezone('US/Eastern')
-        start_time = datetime.now(eastern).replace(hour=4, minute=0, second=0, microsecond=0)
+        start_time = eastern.localize(datetime(2025, 9, 1, 4, 0, 0)).astimezone(timezone.utc)
         
-        # Build SQL query
+        # Build SQL query to get raw individual activity records (no grouping)
         placeholders = ', '.join([f":id{i}" for i in range(len(user_ids))])
         sql_query = f"""
         SELECT 
                 USER_ID,
-                COUNT(*) AS ASSESSMENTS_COMPLETED,
-                MAX(ACTIVITY_DATE) AS last_activity_date
+                ACTIVITY_DATE
         FROM FACT_ACTIVITY
         WHERE OUTCOME_ID = :outcome_id
             AND USER_ID IN ({placeholders})
             AND ACTIVITY_DATE >= :start_time
-        GROUP BY USER_ID
-        ORDER BY ASSESSMENTS_COMPLETED DESC
+        ORDER BY USER_ID, ACTIVITY_DATE DESC
         """
         
         # Parameters
@@ -134,32 +132,43 @@ def get_data_from_database():
             max_date_result = pd.read_sql(text(max_date_2025_query), conn)
             max_activity_date_2025 = max_date_result['max_activity_date'].iloc[0]
         
-        # Convert last_activity_date to datetime and then to Eastern Time
+        # Convert ACTIVITY_DATE to datetime and then to Eastern Time
         try:
-            df['last_activity_date'] = pd.to_datetime(df['last_activity_date'])
+            df['ACTIVITY_DATE'] = pd.to_datetime(df['ACTIVITY_DATE'])
             eastern = pytz.timezone('US/Eastern')
-            df['last_activity_date_est'] = df['last_activity_date'].dt.tz_localize('UTC').dt.tz_convert(eastern)
-            df['last_activity_date_est'] = df['last_activity_date_est'].dt.tz_localize(None)
+            df['ACTIVITY_DATE_EST'] = df['ACTIVITY_DATE'].dt.tz_localize('UTC').dt.tz_convert(eastern)
+            df['ACTIVITY_DATE_EST'] = df['ACTIVITY_DATE_EST'].dt.tz_localize(None)
+            df['ACTIVITY_DATE_ONLY'] = df['ACTIVITY_DATE_EST'].dt.date
         except Exception as dt_error:
             st.warning(f"Date conversion warning: {dt_error}")
             # Fallback: use the original date column
-            df['last_activity_date_est'] = df['last_activity_date']
+            df['ACTIVITY_DATE_EST'] = df['ACTIVITY_DATE']
+            df['ACTIVITY_DATE_ONLY'] = pd.to_datetime(df['ACTIVITY_DATE']).dt.date
+        
+        # Now group by USER_ID using pandas to get assessments completed and last activity
+        grouped_df = df.groupby('USER_ID').agg({
+            'ACTIVITY_DATE': 'count',  # Count of assessments
+            'ACTIVITY_DATE_EST': 'max'  # Latest activity datetime
+        }).reset_index()
+        
+        # Rename columns for clarity
+        grouped_df.columns = ['USER_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']
         
         # Join with revops.csv for names
         try:
             revops_df = pd.read_csv('revops.csv')
-            merged_df = df.merge(revops_df, left_on='USER_ID', right_on='User_Id', how='left')
-            result = merged_df[['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'last_activity_date_est']].copy()
+            merged_df = grouped_df.merge(revops_df, left_on='USER_ID', right_on='User_Id', how='left')
+            result = merged_df[['USER_ID', 'FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']].copy()
             result.columns = [col.upper() for col in result.columns]
-            return result, datetime.now(), max_activity_date_2025
+            return result, datetime.now(), max_activity_date_2025, df  # Return raw data too
         except FileNotFoundError:
             # If revops.csv not found, return data without names
-            df.columns = [col.upper() for col in df.columns]
-            return df, datetime.now(), max_activity_date_2025
+            grouped_df.columns = [col.upper() for col in grouped_df.columns]
+            return grouped_df, datetime.now(), max_activity_date_2025, df  # Return raw data too
             
     except Exception as e:
         st.error(f"Database connection failed: {e}")
-        return None, None, None
+        return None, None, None, None
 
 # Title and description with logo
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -167,8 +176,36 @@ with col2:
     #st.image("https://media.licdn.com/dms/image/v2/D560BAQFSTXhdraFD5Q/company-logo_200_200/company-logo_200_200/0/1724431599059/groundgame_health_logo?e=2147483647&v=beta&t=m6wbKFRl8Ecxb7ECLTMRp0QLOMTJ-sOjUBBOGWtlNco", width=150)
     st.title("RevOps Assessments Dashboard")
 
-# Sidebar with refresh controls
+# Sidebar with date filter and refresh controls
 with st.sidebar:
+    st.header("Filters")
+    
+    # Date filter
+    st.subheader("📅 Date Filter")
+    
+    # Option to filter by single date or date range
+    filter_type = st.radio(
+        "Filter type:",
+        ["Single Date", "Date Range"],
+        index=0,  # Default to "Single Date"
+        help="Choose to filter by a single date or date range"
+    )
+    
+    if filter_type == "Single Date":
+        selected_date = st.date_input(
+            "Select date",
+            value=pd.to_datetime("today").date(),
+            help="Filter data for this specific date"
+        )
+        date_range = (selected_date, selected_date)  # Convert to range format
+    else:
+        date_range = st.date_input(
+            "Select date range",
+            value=(pd.to_datetime("2025-09-01").date(), pd.to_datetime("today").date()),
+            help="Filter data by activity date range"
+        )
+    
+    st.markdown("---")
     st.header("Data Controls")
     
     # Use session state to manage the refresh flow
@@ -204,16 +241,45 @@ with st.sidebar:
             st.rerun()
 
 # Get data
-df, last_fetched, max_activity_date_2025 = get_data_from_database()
+df, last_fetched, max_activity_date_2025, raw_df = get_data_from_database()
 
-if df is not None:
+if df is not None and raw_df is not None:
+    
+    # Apply filters to raw data first, then re-group
+    filtered_raw = raw_df.copy()
+    
+    # Filter by date range
+    if len(date_range) == 2:
+        start_date, end_date = date_range
+        filtered_raw = filtered_raw[
+            (filtered_raw['ACTIVITY_DATE_ONLY'] >= start_date) & 
+            (filtered_raw['ACTIVITY_DATE_ONLY'] <= end_date)
+        ]
+    
+    # Re-group the filtered raw data
+    if len(filtered_raw) > 0:
+        filtered_grouped = filtered_raw.groupby('USER_ID').agg({
+            'ACTIVITY_DATE': 'count',  # Count of assessments
+            'ACTIVITY_DATE_EST': 'max'  # Latest activity datetime
+        }).reset_index()
+        
+        # Rename columns for clarity
+        filtered_grouped.columns = ['USER_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST']
+        
+        # Join with names from original df (using uppercase column names)
+        filtered_df = df[['FULL_NAME', 'LOGIN_ID', 'USER_ID']].merge(
+            filtered_grouped, on='USER_ID', how='inner'
+        )
+    else:
+        # No data after filtering
+        filtered_df = pd.DataFrame(columns=['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'LAST_ACTIVITY_DATE_EST'])
 
     # Show metrics
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Total Users", len(df))
+        st.metric("Total Users", len(filtered_df))
     with col2:
-        st.metric("Total Assessments", int(df['ASSESSMENTS_COMPLETED'].sum()))
+        st.metric("Total Assessments", int(filtered_df['ASSESSMENTS_COMPLETED'].sum()) if len(filtered_df) > 0 else 0)
     with col3:
         # Get the maximum date from 2025 data
         if pd.isna(max_activity_date_2025):
@@ -226,8 +292,9 @@ if df is not None:
             formatted_datetime = max_date_est.strftime('%Y-%m-%d %H:%M')
         st.metric("Data as of (EST)", formatted_datetime)
     
-    # Show table with index starting from 1
-    df_display = df.copy()
+    # Show table with index starting from 1, sorted by assessments completed (descending)
+    df_display = filtered_df.copy()
+    df_display = df_display.sort_values('ASSESSMENTS_COMPLETED', ascending=False)
     df_display.index = range(1, len(df_display) + 1)
     st.dataframe(df_display, width='stretch')
     
