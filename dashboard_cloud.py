@@ -38,36 +38,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-def should_auto_refresh():
-    """Check if it's time for automatic refresh (at 25 minutes past each hour in Eastern Time)"""
-    eastern = pytz.timezone('US/Eastern')
-    now_est = datetime.now(eastern)
-    
-    # Initialize session state for tracking refreshes with current hour if not set
-    if 'last_auto_refresh_hour' not in st.session_state:
-        # Initialize with current hour if we're past :25, otherwise -1
-        if now_est.minute >= 25:
-            st.session_state.last_auto_refresh_hour = now_est.hour
-        else:
-            st.session_state.last_auto_refresh_hour = -1
-    
-    # Check if it's 25 minutes past any hour and we haven't refreshed this hour yet
-    if now_est.minute >= 25 and st.session_state.last_auto_refresh_hour != now_est.hour:
-        st.session_state.last_auto_refresh_hour = now_est.hour
-        return True
-    
-    return False
-
-def auto_refresh_data():
-    """Automatically refresh data if it's the right time (cloud-compatible)"""
-    if should_auto_refresh():
-        # Clear cache to force refresh
-        st.cache_data.clear()
-        return True
-    return False
-
 # Database connection function with automatic refresh
-@st.cache_data(ttl=3600)  # Cache for 1 hour (3600 seconds) - aligns with hourly refresh cycle
+@st.cache_data(ttl=600)  # Cache for 10 minutes (600 seconds) - fresh data every 10 minutes
 def get_data_from_database():
     """Fetch data directly from database with caching"""
     try:
@@ -237,20 +209,8 @@ with st.sidebar:
     st.markdown("---")
     st.header("Data Controls")
     
-    # Show next auto-refresh time (in Eastern Time)
-    eastern = pytz.timezone('US/Eastern')
-    now_est = datetime.now(eastern)
-    if now_est.minute < 25:
-        next_refresh = now_est.replace(minute=25, second=0, microsecond=0)
-        time_until = next_refresh - now_est
-        minutes_until = int(time_until.total_seconds() / 60)
-        st.info(f"🕐 Auto-refresh window: {next_refresh.strftime('%I:%M %p EST')} ({minutes_until} min)")
-    else:
-        next_refresh = (now_est + timedelta(hours=1)).replace(minute=25, second=0, microsecond=0)
-        st.info(f"🕐 Next auto-refresh window: {next_refresh.strftime('%I:%M %p EST')}")
-    
     # Clearer explanation
-    st.caption("💡 Data automatically refreshes every hour starting at :25 minutes past the hour")
+    st.caption("💡 Data automatically refreshes every 10 minutes when you visit the page")
     
     # Use session state to manage the refresh flow
     if 'refresh_clicked' not in st.session_state:
@@ -286,12 +246,6 @@ with st.sidebar:
 
 # Get data
 df, last_fetched, max_activity_date_2025, raw_df = get_data_from_database()
-
-# Check for automatic refresh (cloud-compatible)
-refreshed = auto_refresh_data()
-if refreshed:
-    # Re-fetch data after cache clear
-    df, last_fetched, max_activity_date_2025, raw_df = get_data_from_database()
 
 if df is not None and raw_df is not None:
     
