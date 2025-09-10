@@ -129,10 +129,10 @@ def get_data_from_database():
         with engine.connect() as conn:
             df = pd.read_sql(text(sql_query), conn, params=params)
             
-            # Get max activity date from entire database for "Data as of" metric
-            max_date_query = "SELECT MAX(ACTIVITY_DATE) as max_activity_date FROM FACT_ACTIVITY"
-            max_date_result = pd.read_sql(text(max_date_query), conn)
-            max_activity_date = max_date_result['max_activity_date'].iloc[0]
+            # Get max activity date from 2025 for "Data as of" metric
+            max_date_2025_query = "SELECT MAX(ACTIVITY_DATE) as max_activity_date FROM FACT_ACTIVITY WHERE YEAR(ACTIVITY_DATE) = 2025"
+            max_date_result = pd.read_sql(text(max_date_2025_query), conn)
+            max_activity_date_2025 = max_date_result['max_activity_date'].iloc[0]
         
         # Convert last_activity_date to datetime and then to Eastern Time
         try:
@@ -151,11 +151,11 @@ def get_data_from_database():
             merged_df = df.merge(revops_df, left_on='USER_ID', right_on='User_Id', how='left')
             result = merged_df[['FULL_NAME', 'LOGIN_ID', 'ASSESSMENTS_COMPLETED', 'last_activity_date_est']].copy()
             result.columns = [col.upper() for col in result.columns]
-            return result, datetime.now(), max_activity_date
+            return result, datetime.now(), max_activity_date_2025
         except FileNotFoundError:
             # If revops.csv not found, return data without names
             df.columns = [col.upper() for col in df.columns]
-            return df, datetime.now(), max_activity_date
+            return df, datetime.now(), max_activity_date_2025
             
     except Exception as e:
         st.error(f"Database connection failed: {e}")
@@ -204,7 +204,7 @@ with st.sidebar:
             st.rerun()
 
 # Get data
-df, last_fetched, max_activity_date = get_data_from_database()
+df, last_fetched, max_activity_date_2025 = get_data_from_database()
 
 if df is not None:
 
@@ -215,13 +215,13 @@ if df is not None:
     with col2:
         st.metric("Total Assessments", int(df['ASSESSMENTS_COMPLETED'].sum()))
     with col3:
-        # Get the maximum date from entire database (not filtered data)
-        if pd.isna(max_activity_date):
-            formatted_datetime = "No data available"
+        # Get the maximum date from 2025 data
+        if pd.isna(max_activity_date_2025):
+            formatted_datetime = "No 2025 data available"
         else:
             # Convert UTC to Eastern Time for display
             eastern = pytz.timezone('US/Eastern')
-            max_date_utc = pd.to_datetime(max_activity_date).tz_localize('UTC')
+            max_date_utc = pd.to_datetime(max_activity_date_2025).tz_localize('UTC')
             max_date_est = max_date_utc.tz_convert(eastern)
             formatted_datetime = max_date_est.strftime('%Y-%m-%d %H:%M')
         st.metric("Data as of", formatted_datetime)
