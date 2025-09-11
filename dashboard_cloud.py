@@ -180,16 +180,28 @@ with st.sidebar:
     )
     
     if filter_type == "Single Date":
+        # Get today's date in Eastern Time
+        eastern = pytz.timezone('US/Eastern')
+        today_est = datetime.now(eastern).date()
+        
         selected_date = st.date_input(
             "Select date",
-            value=pd.to_datetime("today").date(),
+            value=today_est,
+            min_value=pd.to_datetime("2025-09-01").date(),
+            max_value=min(pd.to_datetime("2025-09-30").date(), today_est),
             help="Filter data for this specific date"
         )
         date_range = (selected_date, selected_date)  # Convert to range format
     else:
+        # Get today's date in Eastern Time
+        eastern = pytz.timezone('US/Eastern')
+        today_est = datetime.now(eastern).date()
+        
         date_range = st.date_input(
             "Select date range",
-            value=(pd.to_datetime("2025-09-01").date(), pd.to_datetime("today").date()),
+            value=(pd.to_datetime("2025-09-01").date(), today_est),
+            min_value=pd.to_datetime("2025-09-01").date(),
+            max_value=min(pd.to_datetime("2025-09-30").date(), today_est),
             help="Filter data by activity date range"
         )
     
